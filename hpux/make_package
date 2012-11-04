@@ -1,0 +1,212 @@
+#!/usr/bin/perl
+
+%title= (
+  "cvsnt" => "CVSNT Version Control System",
+  "cvs-suite" => "CVS Suite - Enterprise Version Control",
+);
+
+%architecture= (
+  "B.11.23" => "HP-UX_B.11.23",
+  "B.11.11" => "HP-UX_B.11.11",
+  "B.11.00" => "HP-UX_B.11.00",
+);
+
+%os_release= (
+  "B.11.23" => "?.11.2?",
+  "B.11.11" => "?.11.1?",
+  "B.11.00" => "?.11.0?",
+);
+
+%machine_type= (
+  "ia64" => "ia64*",
+  "hppa2.0w" => "9000/800",
+  "hppa2.0w" => "9000/700",
+  "hppa2.0w" => "9000/*",
+  "hppa2.0w" => "hppa",
+);
+
+$t=$ARGV[0];
+$v=$ARGV[1];
+$bit=$ARGV[2];
+$prefix=$ARGV[3];
+$tmp=$ARGV[4];
+$arch=$ARGV[5];
+$mysql=$ARGV[6];
+$sqlite=$ARGV[7];
+$sserver=$ARGV[8];
+$gserver=$ARGV[9];
+$oracle=$ARGV[10];
+$sourcedir=$ARGV[11];
+
+open(UN,"uname -a|") or die "Unable to run uname";
+$_ = <UN>;
+close(UN);
+($os, $nam, $a, $something, $m) = split(/ /);
+
+if($bit eq "32") {
+  $cpu64="";
+} else {
+  $cpu64="_$bit";
+}
+
+if($m ne "ia64") {
+  $m="hppa";
+}
+
+$target="$t-$v-$m-hpux$bit.depot";
+$targetz="$t-$v-$m-hpux$bit.depot.Z";
+print $target,"\n";
+
+open (PSF,">$t.psf") or die "Unable to write PSF file ($!)\n";
+
+print PSF <<EOF;
+depot
+	layout_version	1.0
+vendor
+	tag	MHSL
+	title	March Hare Software Ltd
+	description	Enterprise Versioning Solutions
+category
+	tag	version_control
+	title	Version Control Applications
+	description	CVSNT version control application
+	revision	$v
+end
+product
+        tag	$t
+        number	$t
+        vendor_tag	MHSL
+        title	CVSNT Version Control System
+        description	< $sourcedir/hpux/desc.hp
+        revision	$v
+	category_tag	version_control
+	copyright	"Copyright (C) March Hare Software Ltd"
+	readme	< $sourcedir/hpux/readme.hp
+
+        architecture 	HP-UX_B.11_32/64
+        machine_type	*
+        os_name	HP-UX
+        os_release	?.1?.*
+        directory	$prefix
+	is_locatable	false
+
+	subproduct
+		tag	$t-base
+		title	"CVSNT base tools"
+		contents	base
+	end
+	subproduct
+		tag	$t-params
+		title	"CVSNT params files"
+		contents	params
+	end
+	subproduct
+		tag	$t-config
+		title	"CVSNT config files"
+		contents	config
+	end
+	subproduct
+		tag	$t-SQLite
+		title	"CVSNT SQLite Database Driver"
+		contents	$t-sqlite-driver
+	end
+	subproduct
+		tag	$t-Oracle
+		title	"CVSNT Oracle Database Driver"
+		contents	$t-oracle-driver
+	end
+	subproduct
+		tag	$t-MySQL
+		title	"CVSNT MySQL Database Driver"
+		contents	$t-mysql-driver
+	end
+	subproduct
+		tag	$t-gserver
+		title	"CVSNT gserver protocol"
+		contents	$t-gserver-protocol
+	end
+	subproduct
+		tag	$t-sserver
+		title	"CVSNT sserver protocol"
+		contents	$t-sserver-protocol
+	end
+        fileset
+                tag	base
+		title	Base
+                revision	$v
+                directory	$tmp$prefix = $prefix
+                file_permissions	-u 222 -g bin -o bin
+                file	*
+        end
+        fileset
+                tag	params
+		title	Params
+                revision	$v
+                directory	$tmp/etc = /etc
+                file_permissions	-u 222 -g bin -o bin
+                file	*
+        end
+        fileset
+                tag	config
+		title	Config
+                revision	$v
+                directory	$tmp/sbin = /sbin
+                file_permissions	-u 222 -g bin -o bin
+                file	*
+        end
+        fileset
+                tag	$t-sqlite-driver
+		title	SQLite driver for CVSNT
+		description	SQLite driver requires SQLite 2 or higher to be installed
+                revision	$v
+                directory	$sqlite = $prefix$arch/lib/cvsnt/database
+                file_permissions	-u 222 -g bin -o bin
+                file	*
+        end
+        fileset
+                tag	$t-mysql-driver
+		title	MySQL driver for CVSNT
+		description	MySQL driver requires MySQL 3.23 or higher to be installed
+                revision	$v
+                directory	$mysql = $prefix$arch/lib/cvsnt/database
+                file_permissions	-u 222 -g bin -o bin
+                file	*
+        end
+        fileset
+                tag	$t-oracle-driver
+		title	Oracle driver for CVSNT
+		description	Oracle driver requires Oracle 8i or higher to be installed
+                revision	$v
+                directory	$oracle = $prefix$arch/lib/cvsnt/database
+                file_permissions	-u 222 -g bin -o bin
+                file	*
+        end
+        fileset
+                tag	$t-sserver-protocol
+		title	Protocol sserver for CVSNT
+		description	Protocol sserver requires openssl to be installed
+                revision	$v
+		prerequisite	openssl.OPENSSL-LIB
+                directory	$sserver = $prefix$arch/lib/cvsnt/protocols
+                file_permissions	-u 222 -g bin -o bin
+                file	*
+        end
+        fileset
+                tag	$t-gserver-protocol
+		title	Protocol gserver for CVSNT
+		description	Protocol sserver requires KRB5-Client to be installed
+                revision	$v
+		prerequisite	KRB5-Client
+                directory	$gserver = $prefix$arch/lib/cvsnt/protocols
+                file_permissions	-u 222 -g bin -o bin
+                file	*
+        end
+end
+EOF
+
+close(PSF); 
+
+system("/usr/sbin/swpackage -vv -s $t.psf -x target_type=tape @ $target");
+system("rm -f $targetz");
+system("compress $target");
+system("rm $t.psf");

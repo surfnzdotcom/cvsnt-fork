@@ -1,0 +1,24 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+
+<Wix xmlns='http://schemas.microsoft.com/wix/2003/01/wi'>
+<Fragment Id="workspacemanager">
+      <DirectoryRef Id="TOOLS_INSTALLDIR" src="$(var.MARCH_HARE)\">
+         <Directory Id="WorkspaceManagerStuff" Name=".">
+	   <Component Id="WorkspaceManager" Guid="7A652787-168E-4e25-ADE3-65BA6B267B05" DiskId="5">
+	      <File Id="WorkspaceManager.exe" Name="WORKSP~1.EXE" LongName="WorkspaceManager.exe">
+	        <Shortcut Id="WorkspaceManager.exe" Name="WORKSP~1.EXE" Directory="CvsntStartMenuFolder" Advertise="no" LongName="CVS Suite Studio"/>
+	      </File>
+            </Component>
+         </Directory>
+      </DirectoryRef>
+
+   <FeatureRef Id="Cvsnt">
+    <Feature Id="WorkspaceManager" Title="CVS Suite Studio" Description="CVS Suite Studio" AllowAdvertise="no" Level="3">
+      <ComponentRef Id="WorkspaceManager" />
+      <ComponentRef Id="Msvcr71" />
+      <ComponentRef Id="Mfc71u" />
+      <ComponentRef Id="CvsntStartMenuFolder" />
+    </Feature>
+   </FeatureRef>
+  </Fragment>
+</Wix>

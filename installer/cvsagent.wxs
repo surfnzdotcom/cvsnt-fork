@@ -1,0 +1,26 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+
+<Wix xmlns='http://schemas.microsoft.com/wix/2003/01/wi'>
+<Fragment Id="cvsagent">
+      <DirectoryRef Id="COMMON_INSTALLDIR" src="$(var.SYSFILES)\">
+        <Component Id="U3dapi" Guid="1D179786-4E80-41d8-A316-2F69B0E0F8E6" DiskId="1">
+           <File Id="u3dapi10.dll" Name="u3dapi10.dll" />
+        </Component>
+      </DirectoryRef>
+      <DirectoryRef Id="CVSNT_INSTALLDIR" src="$(var.CVSNT_BASE)\">
+        <Component Id="CvsAgent" Guid="a6522da3-a6bf-4080-9eb6-7b65e6b8c1a6" DiskId="1">
+          <File Id="cvsagent.exe" Name="cvsagent.exe">
+	    <Shortcut Id="cvsagent.exe" Advertise="no" Name="CVSNTA~1.LNK" Directory="CvsntStartMenuFolder" LongName="CVSNT Password Agent.lnk" />
+	  </File>
+	</Component>
+      </DirectoryRef>
+
+    <FeatureRef Id="Cvsnt">
+      <Feature Id="CvsAgent" Title="Cvs Agent" Description="CVS Agent stores passwords securely in memory rather than write them to disk" AllowAdvertise="no" Level="3">
+	<ComponentRef Id="U3dapi" />
+	<ComponentRef Id="CvsAgent" />
+	<ComponentRef Id="CvsntStartMenuFolder" />
+      </Feature>
+    </FeatureRef>
+  </Fragment>
+</Wix>

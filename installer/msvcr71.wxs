@@ -1,0 +1,13 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+
+<Wix xmlns='http://schemas.microsoft.com/wix/2003/01/wi'>
+  <Fragment Id="msvcr71">
+    <DirectoryRef Id="COMMON_INSTALLDIR" src="$(var.CVSNT_BASE)\sysfiles\">
+      <Component Id="Msvcr71" Guid="2e1a7d52-b188-414f-ab98-522d63e91b15" DiskId="1">
+	<File Id="msvcp71.dll" Name="msvcp71.dll" />
+	<File Id="msvcr71.dll" Name="msvcr71.dll" />
+      </Component>
+    </DirectoryRef>
+  </Fragment>
+</Wix>
+

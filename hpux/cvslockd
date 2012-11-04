@@ -1,0 +1,5 @@
+# CVSLOCKD_START:	Set to 1 to start CVSNT Lock daemon
+# CVSLOCKD_ARGS:	Command line arguments to pass to cvslockd
+#
+CVSLOCKD_START=1
+CVSLOCKD_ARGS=

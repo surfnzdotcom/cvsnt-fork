@@ -1,0 +1,117 @@
+#!/bin/ksh
+
+scp -B abarrett@acer64debian.march-hare.local:cvs/release .
+VERSION=`cat release`
+export VERSION
+scp -B abarrett@acer64debian:cvs/cvsnt-$VERSION.tar.gz .
+rm -rf ./cvsnt-$VERSION.tar
+rm -rf ./cvsnt-$VERSION
+gunzip ./cvsnt-$VERSION.tar.gz
+tar -xf ./cvsnt-$VERSION.tar
+#if [ ! -d cvsnt ]; then  ln -s cvsnt-$VERSION cvsnt ; fi
+export CVSNT=${PWD}/cvsnt-$VERSION
+
+MACHINE=`uname -m`
+case $MACHINE in
+   ia64) ARCH="ia64";
+   SUFF=".so";
+   OPTIMISE="+O3";
+   PKGARCH="ia64";
+   LINKARCH="hpux64";
+   ANYDISABLE="--disable-mdns"
+   ;;
+   *) ARCH="pa64";
+   SUFF=".sl";
+   OPTIMISE="-O";
+   PKGARCH="hppa";
+   LINKARCH="pa20_64";
+   ANYDISABLE="--enable-mdns"
+   ;;
+esac
+
+unset CVSROOT
+export PREFIX=/usr/local
+export CONFIG=/etc/cvsnt
+export DESTDIR=${PWD}/tmp
+export MYSQLDIR=/opt/mysql
+export SQLITE64=/usr/local
+export MYSQLDRV=${DESTDIR}/mysqldrv
+export ORACLEDRV=${DESTDIR}/oracledrv
+export SQLITEDRV=${DESTDIR}/sqlitedrv
+export GSERVER=${DESTDIR}/gserver
+export SSERVER=${DESTDIR}/sserver
+./rmla.sh ${PREFIX}/$ARCH ${CVSNT}
+rm -rf $DESTDIR
+mkdir $DESTDIR
+export PATH=${DESTDIR}${PREFIX}/$ARCH/bin:${PATH}
+export LD_LIBRARY_PATH=${DESTDIR}${PREFIX}/$ARCH/lib:${PREFIX}/$ARCH/lib:${CVSNT}/cvsapi/.libs:${CVSNT}/cvstools/.libs:${CVSNT}/mdnsclient/.libs
+cd $CVSNT
+make distclean
+# --disable-mdns
+./configure CC="aCC -D__HP_aCC" CXX="aCC" CFLAGS="$OPTIMISE +z +noobjdebug +DD64 -Ae -mt -I$MYSQLDIR/include/mysql -I$SQLITE64/include" CXXFLAGS="$OPTIMISE +z +noobjdebug +DD64 -AA -mt -I$MYSQLDIR/include/mysql  -I$SQLITE64/include" LDFLAGS="-mt -L$CVSNT/cvsapi/.libs -L$CVSNT/cvstools/.libs -L$MYSQL/lib/$LINKARCH/mysql  -L$SQLITE64/lib/$ARCH -D_RWSTD_MULTI_THREAD -D_REENTRANT" CPPFLAGS="-D_HPUX_SOURCE -D_POSIX_SOURCE -D__HP_NO_STRING_OVERLOADS -D_RWSTD_MULTI_THREAD -D_REENTRANT -I$MYSQLDIR/include/mysql -I$SQLITE64/include" --prefix=$PREFIX/$ARCH --with-config-dir=$CONFIG --sysconfdir=/etc  $ANYDISABLE
+make DESTDIR=${DESTDIR}
+if [ ! -x src/.libs/cvsnt ]; then ../cpyla.sh ${PREFIX}/${ARCH} ${CVSNT}; make DESTDIR=${DESTDIR}; fi
+if [ ! -x src/.libs/cvsnt ]; then exit 1; fi
+if [ ! -x lockservice/.libs/cvslockd ]; then exit 1; fi
+make install DESTDIR=${DESTDIR}
+echo "***************************************************"
+echo "if there is an error..."
+echo ""
+echo "probably needs the cvsapi and cvstools"
+echo "libraries installed in $PREFIX/${ARCH}/lib/*$SUFF"
+echo "and $PREFIX/${ARCH}/lib/*.la"
+echo ""
+echo "eg:"
+echo ""
+echo "# mkdir $PREFIX"
+echo "# mkdir $PREFIX/$ARCH"
+echo "# mkdir $PREFIX/$ARCH/lib"
+echo "# cp cvsnt/cvsapi/.libs/*$SUFF $PREFIX/$ARCH/lib"
+echo "# cp cvsnt/cvsapi/.libs/*.la  $PREFIX/$ARCH/lib"
+echo ""
+echo "***************************************************"
+if [ ! -x ${DESTDIR}${PREFIX}/${ARCH}/bin/cvsnt ]; then ../cpyla.sh ${PREFIX}/${ARCH} ${CVSNT}; make install DESTDIR=${DESTDIR}; fi
+if [ ! -x ${DESTDIR}${PREFIX}/${ARCH}/bin/cvsnt ]; then exit 1; fi
+if [ -f core ]; then rm core; fi
+BUILD=`${DESTDIR}${PREFIX}/${ARCH}/bin/cvsnt ver -q`
+if [ -f core ]; then exit 1; fi
+if [ ! -n "$BUILD" ]; then ../cpyla.sh ${PREFIX}/${ARCH} ${CVSNT}; make install DESTDIR=${DESTDIR}; fi
+cd ..
+if [ -f core ]; then rm core; fi
+BUILD=`${DESTDIR}${PREFIX}/${ARCH}/bin/cvsnt ver -q`
+if [ -f core ]; then exit 1; fi
+if [ ! -n "$BUILD" ]; then exit 1; fi
+rm -rf $MYSQLDRV
+mkdir $MYSQLDRV
+rm -rf $ORACLEDRV
+mkdir $ORACLEDRV
+rm -rf $SQLITEDRV
+mkdir $SQLITEDRV
+rm -rf $SSERVER
+mkdir $SSERVER
+rm -rf $GSERVER
+mkdir $GSERVER
+if [ -n "$ARCH" ]; then ARCH=/$ARCH; fi
+if [ -f ${DESTDIR}${PREFIX}${ARCH}/lib/cvsnt/database/mysql.la ]; then mv ${DESTDIR}${PREFIX}${ARCH}/lib/cvsnt/database/mysql.la $MYSQLDRV; fi
+if [ -f ${DESTDIR}${PREFIX}${ARCH}/lib/cvsnt/database/mysql${SUFF} ]; then mv ${DESTDIR}${PREFIX}${ARCH}/lib/cvsnt/database/mysql${SUFF} $MYSQLDRV; fi
+if [ -f ${DESTDIR}${PREFIX}${ARCH}/lib/cvsnt/database/oracle.la ]; then mv ${DESTDIR}${PREFIX}${ARCH}/lib/cvsnt/database/oracle.la $ORACLEDRV; fi
+if [ -f ${DESTDIR}${PREFIX}${ARCH}/lib/cvsnt/database/oracle${SUFF} ]; then mv ${DESTDIR}${PREFIX}${ARCH}/lib/cvsnt/database/oracle${SUFF} $ORACLEDRV; fi
+# if [ -f ${DESTDIR}${PREFIX}${ARCH}/lib/cvsnt/database/sqlite.la ]; then mv ${DESTDIR}${PREFIX}${ARCH}/lib/cvsnt/database/sqlite.la $SQLITEDRV; fi
+#if [ -f ${DESTDIR}${PREFIX}${ARCH}/lib/cvsnt/database/sqlite${SUFF} ]; then mv ${DESTDIR}${PREFIX}${ARCH}/lib/cvsnt/database/sqlite${SUFF} $SQLITEDRV; fi
+if [ -f ${DESTDIR}${PREFIX}${ARCH}/lib/cvsnt/protocols/sserver.la ]; then mv ${DESTDIR}${PREFIX}${ARCH}/lib/cvsnt/protocols/sserver.la $SSERVER; fi
+if [ -f ${DESTDIR}${PREFIX}${ARCH}/lib/cvsnt/protocols/sserver${SUFF} ]; then mv ${DESTDIR}${PREFIX}${ARCH}/lib/cvsnt/protocols/sserver${SUFF} $SSERVER; fi
+if [ -f ${DESTDIR}${PREFIX}${ARCH}/lib/cvsnt/protocols/gserver.la ]; then mv ${DESTDIR}${PREFIX}${ARCH}/lib/cvsnt/protocols/gserver.la $GSERVER; fi
+if [ -f ${DESTDIR}${PREFIX}${ARCH}/lib/cvsnt/protocols/gserver${SUFF} ]; then mv ${DESTDIR}${PREFIX}${ARCH}/lib/cvsnt/protocols/gserver${SUFF} $GSERVER; fi
+if [ ! -d ${DESTDIR}/etc ]; then  mkdir ${DESTDIR}/etc ; fi
+if [ ! -d ${DESTDIR}/etc/rc.config.d ]; then  mkdir ${DESTDIR}/etc/rc.config.d ; fi
+if [ ! -f ${DESTDIR}/etc/rc.config.d/cvslockd ]; then  cp ${CVSNT}/hpux/cvslockd ${DESTDIR}/etc/rc.config.d ; fi
+if [ ! -d ${DESTDIR}/sbin ]; then  mkdir ${DESTDIR}/sbin ; fi
+if [ ! -d ${DESTDIR}/sbin/rc1.d ]; then  mkdir ${DESTDIR}/sbin/rc1.d ; fi
+if [ ! -d ${DESTDIR}/sbin/rc2.d ]; then  mkdir ${DESTDIR}/sbin/rc2.d ; fi
+if [ ! -d ${DESTDIR}/sbin/init.d ]; then  mkdir ${DESTDIR}/sbin/init.d ; fi
+if [ ! -f ${DESTDIR}/sbin/init.d/cvslock ]; then  cp ${CVSNT}/hpux/cvslock ${DESTDIR}/sbin/init.d ; fi
+if [ ! -h ${DESTDIR}/sbin/rc1.d/K393cvslk ]; then  cd ${DESTDIR}/sbin/rc1.d ; rm -rf ./K393cvslk; ln -s ../init.d/cvslock ./K393cvslk ; cd ${CVSNT}; cd .. ; fi
+if [ ! -h ${DESTDIR}/sbin/rc2.d/S393cvslk ]; then  cd ${DESTDIR}/sbin/rc2.d ; rm -rf ./S393cvslk; ln -s ../init.d/cvslock ./S393cvslk ; cd ${CVSNT}; cd .. ; fi
+./make_package cvsnt $BUILD 64 $PREFIX $DESTDIR "{$ARCH}" $MYSQLDRV $SQLITEDRV $SSERVER $GSERVER $ORACLEDRV $CVSNT
+if [ -f cvsnt-$BUILD-$PKGARCH-hpux64.depot.Z ]; then  scp -B cvsnt-$BUILD-$PKGARCH-hpux64.depot.Z abarrett@acer64debian:cvs ; fi
+echo "Built:  cvsnt-$BUILD-$PKGARCH-hpux64.depot.Z"

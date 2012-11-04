@@ -1,0 +1,48 @@
+#!/bin/bash
+
+scp acer64debian:cvs/release .
+export VERSION=`cat release`
+scp acer64debian:cvs/cvsnt-$VERSION.tar.gz .
+scp acer64debian:suite/triggers-$VERSION.tar.gz .
+rm -rf  ./cvsnt-$VERSION.tar
+rm -rf  ./cvsnt-$VERSION
+gunzip ./cvsnt-$VERSION.tar.gz
+tar xf ./cvsnt-$VERSION.tar
+export CVSNT=${PWD}/cvsnt-$VERSION
+rm -rf  ./triggers-$VERSION.tar
+rm -rf  ./triggers-$VERSION
+gunzip ./triggers-$VERSION.tar.gz
+tar xf ./triggers-$VERSION.tar
+export TRIGGERS=${PWD}/triggers-$VERSION
+
+export PREFIX=/usr/local
+export CONFIG=/etc/cvsnt
+export DESTDIR=${PWD}/tmp
+export MYSQLDIR=${PWD}/../um_mysql32
+rm -rf $DESTDIR
+mkdir $DESTDIR
+export LD_LIBRARY_PATH=${DESTDIR}${PREFIX}/lib:/usr/local/lib:/usr/local/ssl/lib
+cd $CVSNT
+make distclean
+./configure --prefix=$PREFIX --with-config-dir=$CONFIG --with-ssl=/usr/local/ssl CFLAGS="-m32 -O2 -fPIC" CXXFLAGS="-m32 -O2 -fPIC" CPPFLAGS="-I/usr/local/include -I$MYSQLDIR/include/mysql" LDFLAGS=" -L/usr/local/lib -L${PREFIX}/lib -R${PREFIX}/lib -L$MYSQLDIR/lib"
+make DESTDIR=${DESTDIR}
+if [ ! -x ${CVSNT}/src/.libs/cvsnt ]; then exit 1; fi
+make install DESTDIR=${DESTDIR}
+if [ ! -x ${DESTDIR}${PREFIX}/bin/cvsnt ]; then echo "cvsnt not executable at ${DESTDIR}${PREFIX}/bin/cvsnt"; exit 1; fi
+
+cd $TRIGGERS
+make distclean
+./configure --with-cvsnt=$CVSNT --prefix=$PREFIX --with-config-dir=$CONFIG CFLAGS="-m32 -O2 -fPIC" CXXFLAGS="-m32 -O2 -fPIC" CPPFLAGS="-I${DESTDIR}${PREFIX}/include -I/usr/local/include -fPIC" LDFLAGS=" -L${DESTDIR}${PREFIX}/lib -L${PREFIX}/lib -R${PREFIX}/lib"
+make DESTDIR=$DESTDIR
+make install DESTDIR=$DESTDIR
+
+cd ${DESTDIR}
+BUILD=`${DESTDIR}${PREFIX}/bin/cvsnt version -q`
+if [ ! -n "$BUILD" ]; then echo "cannot get build number from ${DESTDIR}${PREFIX}/bin/cvsnt version -q"; exit 1; fi
+cp ../postinstall .
+cp $MYSQLDIR/lib/*.so.10* ${PREFIX}/lib
+echo ../make_package 32 ${BUILD} cvs-suite
+../make_package 32 ${BUILD} cvs-suite
+cd ..
+if [ -f cvs-suite-${BUILD}-sol9-sparc32.bz2 ]; then  scp cvs-suite-${BUILD}-sol9-sparc32.bz2 acer64debian:suite ; fi
+echo "Built: cvs-suite-${BUILD}-sol9-sparc32.bz2"

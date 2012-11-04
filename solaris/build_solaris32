@@ -1,0 +1,35 @@
+#!/bin/bash
+
+scp acer64debian:cvs/release .
+export VERSION=`cat release`
+scp acer64debian:cvs/cvsnt-$VERSION.tar.gz .
+rm -rf  ./cvsnt-$VERSION.tar
+rm -rf  ./cvsnt-$VERSION
+gunzip ./cvsnt-$VERSION.tar.gz
+tar xf ./cvsnt-$VERSION.tar
+export CVSNT=${PWD}/cvsnt-$VERSION
+
+export PREFIX=/usr/local
+export CONFIG=/etc/cvsnt
+export DESTDIR=${PWD}/tmp
+export MYSQLDIR=${PWD}/../um_mysql32
+rm -rf $DESTDIR
+mkdir $DESTDIR
+export LD_LIBRARY_PATH=${DESTDIR}${PREFIX}/lib:/usr/local/lib:/usr/local/ssl/lib
+cd $CVSNT
+make distclean
+./configure --prefix=$PREFIX --with-config-dir=$CONFIG --with-ssl=/usr/local/ssl CFLAGS="-m32 -O2 -fPIC " CXXFLAGS="-m32 -O2 -fPIC " CPPFLAGS="-I/usr/local/include -I$MYSQLDIR/include/mysql" LDFLAGS=" -L/etc/lib -ldl -L/usr/local/lib -L${PREFIX}/lib -R${PREFIX}/lib -L$MYSQLDIR/lib"
+make DESTDIR=${DESTDIR}
+if [ ! -x ${CVSNT}/src/.libs/cvsnt ]; then exit 1; fi
+make install DESTDIR=${DESTDIR}
+if [ ! -x ${DESTDIR}${PREFIX}/bin/cvsnt ]; then echo "cvsnt not executable at ${DESTDIR}${PREFIX}/bin/cvsnt"; exit 1; fi
+
+cd ${DESTDIR}
+BUILD=`${DESTDIR}${PREFIX}/bin/cvsnt version -q`
+if [ ! -n "$BUILD" ]; then echo "cannot get build number from ${DESTDIR}${PREFIX}/bin/cvsnt version -q"; exit 1; fi
+cp ../postinstall .
+echo ../make_package 32 ${BUILD} cvsnt
+../make_package 32 ${BUILD} cvsnt
+cd ..
+if [ -f cvsnt-${BUILD}-sol9-sparc32.bz2 ]; then  scp cvsnt-${BUILD}-sol9-sparc32.bz2 acer64debian:cvs ; fi
+echo "Built: cvsnt-${BUILD}-sol9-sparc32.bz2"
